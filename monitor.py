@@ -10,20 +10,9 @@ Usage:
 """
 
 
-#ip, port = int 
 
-def read_hosts():
-    '''
-    
-    '''
-    path = Path("/")
 
-    with (p / 'hosts.txt').open('r') as file:
-        content = file.read()
-        print(content)
-    
-
-def is_port_open(ip,port, timeout=1):
+def is_port_open(ip,port):
     '''
     Scans the indivvidual port to see if it is open
     '''
@@ -76,35 +65,7 @@ def scan_ports(host, start_time, end_time, workers=200, timeout=1, show_progress
                 sys.stdout.write(f"\rScanned {checked}/{total_time} ports {pct:.1f}% - elapsed {elapsed:.1f}s")
                 sys.stdout.flush()
 
-
-
-def main():
-    '''
-    Description provided here and details about the program
-    '''
-    parser = argparse.ArgumentParser(description="TCP Port Scanner 2.0")
-    parser.add_argument("-t", "--target", help="Hostname or IP to scan")
-    parser.add_argument("--hosts", type=int, help="HOST - multiple hosts separated by comma")
-    parser.add_argument(
-        '--hosts-file',
-        type=argparse.FileType('r'),
-        help="Path to file"
-    )
-    parser.add_argument("--out", "-o", help="Output file - choose where to save it")
-    parser.add_argument('-tt', "--targets", type=argparse.FileType('r'), default=sys.stdin)
-    parser.add_argument("-p", "--port", type=int, default=1, help="Start port to scan - default set to 1")
-    parser.add_argument("-pp", "--ports", help="Ports to scan")
-    parser.add_argument("-w", "--workers", type=int, default=200, help="number of threads")
-    parser.add_argument("--timeout", type=int, default=1, help="socket timeout - default set to 1")
-    args = parser.parse_args()
-
-    '''try:
-        ip = socket.gethostbyname(args.target)
-    except socket.gaierror as e:
-        print(f"ERROR: Could not resolve host: {e}", file=sys.stderr)
-        sys.exit(1)
-    '''
-
+def read_hosts():
     hosts = []
 
     if args.target:
@@ -115,8 +76,8 @@ def main():
         except socket.gaierror as e:
             print(f"ERROR resolving host {args.target}: # {e}", file=sys.stderr)
             sys.exit(1)
-    else:
-        for line in args.host-file:
+    elif args.hosts_file:
+        for line in args.hosts_file:
             host = line.strip()
             if not host or host.startswith("#"):
                 continue
@@ -125,10 +86,29 @@ def main():
                 hosts.append(ip)
             except socket.gaierror as e:
                 print(f"SKIPPING resolving host: {host}: # {e}", file=sys.stderr)
+        args.hosts_file.close()
+
+def add_arguments():
+    # Host setup
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-t", "--target", help="Single IP/Host to scan")
+    group.add_argument("--hosts-file", type=argparse.FileType('r'), help="file to scan")
+
+    parser.add_argument("--hosts", type=int, help="HOST - multiple hosts separated by comma")
 
 
-    #print(f"Scanning  {{ip}} with {args.workers} threads")
+    # Port range 
+    group2 = parser.add_mutually_exclusive_group(required=True)
+    group2.add_argument("-p", "--port", type=int, default=1, help="Start port to scan - default set to 1")
+    group2.add_argument("-pp", "--ports", help="Ports to scan")
 
+    # others
+    parser.add_argument("--out", "-o", help="Output file - choose where to save it")
+    parser.add_argument("-w", "--workers", type=int, default=200, help="number of threads")
+    parser.add_argument("--timeout", type=int, default=1, help="socket timeout - default set to 1")
+    #args = parser.parse_args()
+
+def show_output():
     try:
         open_ports = scan_ports(ip, workers=args.workers, timeout=args.timeout)
     except KeyboardInterrupt:
@@ -143,6 +123,19 @@ def main():
             print(f" - {p}")
     else:
         print("\n no open ports found from host")
+
+
+
+def main():
+    add_arguments()
+    read_hosts()
+    show_output()
+    #print(f"Scanning  {{ip}} with {args.workers} threads")
+    parser = argparse.ArgumentParser(description="TCP Port Scanner 2.0")
+    args = parser.parse_args()
+
+
+
 
 if __name__ == '__main__':
     main()
